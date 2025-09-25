@@ -24,7 +24,11 @@ uv run mcp dev weather.py
 
 ## 1. Remote MCP Weather
 
-Based on [Mossaka/remote-mcp-python-demo](https://github.com/Mossaka/remote-mcp-python-demo)
+Based on:
+
+- [Mossaka/remote-mcp-python-demo](https://github.com/Mossaka/remote-mcp-python-demo)
+- [Google Build and deploy a remote MCP server on Cloud Run](https://cloud.google.com/run/docs/tutorials/deploy-remote-mcp-server)
+- [jlowin/fastmcp samples](https://github.com/jlowin/fastmcp)
 
 ### Build the MCP server
 

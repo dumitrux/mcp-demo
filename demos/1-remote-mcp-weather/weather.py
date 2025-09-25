@@ -6,9 +6,10 @@ Model Context Protocol (MCP) Python server example that provides weather forecas
 import httpx
 import json
 import logging
+import os
 
 # Import FastMCP - the high-level MCP server API
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 
 # Configure module logger
 logging.basicConfig(level=logging.INFO)
@@ -143,13 +144,13 @@ def get_cloths() -> str:
     
     return json.dumps({"cloths": closet_items})
 
-
 if __name__ == "__main__":
-    logger.info(f"MCP Server initialized")
-    
-    # Run the server with streamable-http transport
-    # This can be tested with one of these methods:
-    # 1. Direct execution: python server.py
-    # 2. MCP inspector: mcp dev server.py
-    # 3. Install in Claude Desktop: mcp install server.py
-    mcp.run(transport="streamable-http")
+    port = int(os.environ.get("PORT", "8000"))
+    host = "0.0.0.0"
+    logger.info(f"Attempting to start server on {host}:{port}")
+
+    mcp.run(
+        transport="streamable-http",
+        host=host,
+        port=port,
+    )
