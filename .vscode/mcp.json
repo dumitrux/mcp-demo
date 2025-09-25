@@ -1,13 +1,18 @@
 {
   "servers": {
-    "weather": {
-      "command": "uv",
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp"
+    },
+    "playwright": {
+      "command": "npx",
       "args": [
-        "--directory",
-        "demos/0-local-mcp-weather",
-        "run",
-        "weather.py"
+        "@playwright/mcp@latest"
       ]
+    },
+    "microsoft.docs.mcp": {
+      "type": "http",
+      "url": "https://learn.microsoft.com/api/mcp"
     }
   }
 }
