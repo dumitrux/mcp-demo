@@ -1,19 +1,19 @@
 {
     "openapi": "3.0.1",
     "info": {
-        "title": "MCP Todo Server",
-        "description": "Python-based MCP server for todo management",
+        "title": "MCP Weather Server",
+        "description": "Python-based MCP server for weather forecast and clothing recommendations",
         "version": "1.0"
     },
     "servers": [{
-        "url": "https://apim-rocks.azure-api.net/mcp-todo"
+        "url": "https://apim-rocks.azure-api.net/mcp-weather"
     }],
     "paths": {
         "/mcp": {
             "post": {
                 "tags": ["MCP"],
                 "summary": "MCP StreamableHTTP endpoint",
-                "description": "Handle MCP protocol messages via HTTP",
+                "description": "Handle MCP protocol messages via HTTP - supports weather forecasting, clothing recommendations, and closet inventory",
                 "operationId": "mcp",
                 "parameters": [{
                     "name": "Content-Type",
@@ -21,6 +21,14 @@
                     "required": true,
                     "schema": {
                         "enum": ["application/json"],
+                        "type": "string"
+                    }
+                }, {
+                    "name": "Accept",
+                    "in": "header",
+                    "required": true,
+                    "schema": {
+                        "enum": ["application/json", "text/event-stream", "application/json, text/event-stream"],
                         "type": "string"
                     }
                 }],
@@ -40,10 +48,61 @@
                                     },
                                     "method": {
                                         "type": "string",
+                                        "enum": [
+                                            "initialize",
+                                            "tools/list", 
+                                            "tools/call",
+                                            "resources/list",
+                                            "resources/read",
+                                            "prompts/list",
+                                            "prompts/get"
+                                        ],
                                         "example": "tools/list"
                                     },
                                     "params": {
-                                        "type": "object"
+                                        "type": "object",
+                                        "description": "Parameters specific to the method being called"
+                                    }
+                                }
+                            },
+                            "examples": {
+                                "initialize": {
+                                    "summary": "Initialize MCP session",
+                                    "value": {
+                                        "jsonrpc": "2.0",
+                                        "id": "1",
+                                        "method": "initialize",
+                                        "params": {
+                                            "protocolVersion": "2024-11-05",
+                                            "capabilities": {},
+                                            "clientInfo": {
+                                                "name": "weather-client",
+                                                "version": "1.0.0"
+                                            }
+                                        }
+                                    }
+                                },
+                                "tools_list": {
+                                    "summary": "List available tools",
+                                    "value": {
+                                        "jsonrpc": "2.0",
+                                        "id": "2", 
+                                        "method": "tools/list",
+                                        "params": {}
+                                    }
+                                },
+                                "get_weather": {
+                                    "summary": "Get weather forecast",
+                                    "value": {
+                                        "jsonrpc": "2.0",
+                                        "id": "3",
+                                        "method": "tools/call",
+                                        "params": {
+                                            "name": "get_forecast",
+                                            "arguments": {
+                                                "city": "London"
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -52,7 +111,37 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "MCP protocol response"
+                        "description": "MCP protocol response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "jsonrpc": {
+                                            "type": "string",
+                                            "example": "2.0"
+                                        },
+                                        "id": {
+                                            "type": "string"
+                                        },
+                                        "result": {
+                                            "type": "object",
+                                            "description": "Success result"
+                                        },
+                                        "error": {
+                                            "type": "object",
+                                            "description": "Error information if request failed"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request - Invalid MCP protocol message"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
                     }
                 }
             }

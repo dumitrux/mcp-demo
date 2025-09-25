@@ -40,3 +40,12 @@ resource APIPolicy 'Microsoft.ApiManagement/service/apis/policies@2021-12-01-pre
     format: 'rawxml'
   }
 }
+
+resource APIPolicy 'Microsoft.ApiManagement/service/apis/policies@2021-12-01-preview' = {
+  parent: api
+  name: 'policy'
+  properties: {
+    value: loadTextContent('policy.xml')
+    format: 'rawxml'
+  }
+}

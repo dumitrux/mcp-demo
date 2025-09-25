@@ -42,3 +42,6 @@ module resources 'resources.bicep' = {
 // ------------------
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = resources.outputs.AZURE_CONTAINER_REGISTRY_ENDPOINT
 output AZURE_RESOURCE_MCP_CONTAINER_PY_ID string = resources.outputs.AZURE_RESOURCE_MCP_CONTAINER_PY_ID
+output APIM_SERVICE_NAME string = resources.outputs.APIM_SERVICE_NAME
+output APIM_GATEWAY_URL string = resources.outputs.APIM_GATEWAY_URL
+output MCP_WEATHER_API_URL string = resources.outputs.MCP_WEATHER_API_URL
