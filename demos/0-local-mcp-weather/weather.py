@@ -87,7 +87,7 @@ def run_cloths_recommendation(day: str, city: str) -> str:
     return (
         f"Keep the answer short and concise."
         f"Based on the weather forecast for {day} in {city},"
-        f"recommend appropriate clothing items from my closet"
+        f"recommend appropriate clothing items get_cloths from my-closet"
     )
 
 # Resource to list my cloths
