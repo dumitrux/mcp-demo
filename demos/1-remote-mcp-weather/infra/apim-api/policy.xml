@@ -1,14 +1,55 @@
 <policies>
     <inbound>
         <base />
+        <!-- Set required MCP headers -->
+        <set-header name="Accept" exists-action="override">
+            <value>application/json, text/event-stream</value>
+        </set-header>
+        <!-- Ensure Content-Type for POST requests -->
+        <choose>
+            <when condition="@(context.Request.Method == "POST")">
+                <set-header name="Content-Type" exists-action="skip">
+                    <value>application/json</value>
+                </set-header>
+            </when>
+        </choose>
+        <!-- Add CORS headers for browser clients -->
+        <cors allow-credentials="false">
+            <allowed-origins>
+                <origin>*</origin>
+            </allowed-origins>
+            <allowed-methods>
+                <method>GET</method>
+                <method>POST</method>
+                <method>OPTIONS</method>
+            </allowed-methods>
+            <allowed-headers>
+                <header>Content-Type</header>
+                <header>Accept</header>
+                <header>Authorization</header>
+                <header>api-key</header>
+            </allowed-headers>
+        </cors>
     </inbound>
     <backend>
         <base />
+        <!-- Retry policy for backend failures -->
+        <retry condition="@(context.Response.StatusCode >= 500)" count="3" interval="1" max-interval="10" delta="1">
+            <forward-request />
+        </retry>
     </backend>
     <outbound>
         <base />
+        <!-- Add response headers for MCP protocol -->
+        <set-header name="X-MCP-Server" exists-action="override">
+            <value>weather-mcp-server via APIM</value>
+        </set-header>
     </outbound>
     <on-error>
         <base />
+        <!-- Log errors for debugging -->
+        <trace source="@("APIM-MCP-Error")" severity="error">
+            <message>@($"Error in MCP API: {context.LastError?.Message}")</message>
+        </trace>
     </on-error>
 </policies>

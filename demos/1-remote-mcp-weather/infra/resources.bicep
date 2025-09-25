@@ -4,7 +4,6 @@ param location string = resourceGroup().location
 @description('Tags that will be applied to all resources')
 param tags object = {}
 
-
 param mcpContainerPyExists bool
 
 var abbrs = loadJsonContent('./abbreviations.json')
@@ -121,5 +120,38 @@ module mcpContainerPy 'br/public:avm/res/app/container-app:0.8.0' = {
   }
 }
 
+// API Management service
+resource apim 'Microsoft.ApiManagement/service@2024-06-01-preview' = {
+  name: '${abbrs.apiManagementService}${resourceToken}'
+  location: location
+  tags: tags
+  sku: {
+    name: 'Consumption'
+    capacity: 0
+  }
+  properties: {
+    publisherEmail: 'admin@example.com'
+    publisherName: 'MCP Demo Publisher'
+    enableClientCertificate: false
+  }
+}
+
+// Deploy MCP Weather API to APIM
+module mcpWeatherApi './apim-api/api.bicep' = {
+  name: 'mcp-weather-api'
+  params: {
+    apimServiceName: apim.name
+    APIServiceURL: 'https://${mcpContainerPy.outputs.ingress.fqdn}'
+    APIPath: 'mcp-weather'
+  }
+  dependsOn: [
+    apim
+    mcpContainerPy
+  ]
+}
+
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer
 output AZURE_RESOURCE_MCP_CONTAINER_PY_ID string = mcpContainerPy.outputs.resourceId
+output APIM_SERVICE_NAME string = apim.name
+output APIM_GATEWAY_URL string = apim.properties.gatewayUrl
+output MCP_WEATHER_API_URL string = '${apim.properties.gatewayUrl}/mcp-weather/mcp'
