@@ -11,53 +11,161 @@ Slides:
 
 ## Model Context Protocol
 
-- An open protocol that standardizes how applications provide context to LLMs.
+1. An open protocol that standardizes how applications provide context to LLMs.
+2. Previously there was no standard way for LLMs to access external data and tools.
+   - LLMs are limited by their training data, so they can't access real-time or organization-specific information.
+   - Developers currently have to:
+     - Learn and integrate each service's API.
+     - Manually craft prompts to inform the LLM of available tools or data.
+     - Handle orchestration between the LLM and the tools/data.
+   - USB-C port for AI applications. Just as USB-C provides a standardized way to connect devices to various peripherals and accessories, MCP provides a standardized way to connect AI models to different data sources and tools abstracting away the complexity.
+3. It started as a very simple standard. But better simple and to start from somewhere than complex and not used. Even when HTML paper was presented they rejected it because it was too simple.
+   - This impulsed the development of the agentic AI. The ecosystem is growing fast, and it was anounced not even a year ago. Antropic the creator of Claude created the Model Context Protocol (MCP).
+   - MCP is merely the vehicle for Agentic AI.
+   - Agents can access your Google Calendar and Notion, acting as a more personalized AI assistant. - Generate an entire web app using a Figma design.
 
-- USB-C port for AI applications. Just as USB-C provides a standardized way to connect your devices to various peripherals and accessories, MCP provides a standardized way to connect AI models to different data sources and tools abstracting away the complexitie
-- This impulsed the development of the agentic AI. The ecosystem is growing fast, and it was anounced not even a year ago. Antropic the creator of Claude created the Model Context Protocol (MCP).
-- It started as a very simple standard. But better simple and to start from somewhere than complex and not used. Even when HTML paper was presented they rejected it because it was too simple.
+## MCP Core Concepts
 
-- Know MCP now and for the future, it is like HTML or HTTP, you do not have to develop it, but you use it in your products and services. It is here to stay and will be used in many products and services.
-- The idea is to show the tool and then you can apply it to your own use cases.
+### Participants
 
-- MCP is merely the vehicle for Agentic AI.
+The key participants in the MCP architecture are:
 
-### Host - Clients - Servers
+- MCP Host: The AI application that coordinates and manages one or multiple MCP clients. The environment that integrates the model.
+- MCP Client: A component that maintains a connection to an MCP server and obtains context from an MCP server for the MCP host to use. The LLM application itself (like Claude, ChatGPT, etc)
+- MCP Server: A program that provides context to MCP clients.
 
-Concepts:
+For example: Visual Studio Code acts as an MCP host. When Visual Studio Code establishes a connection to an MCP server, like GitHub, the Visual Studio Code runtime instantiates an MCP client object that maintains the connection to the GitHub MCP server.
 
-- Hosts (AI application, coordinate and manage different MCP clients): VS Code, Claude, Cursor, Copilot Studio,
-- Clients (mantains connection to server and obtain context from them): GitHub Copilot, Claude, Gemini, Azure AI Foundry, etc
-- Servers (lighweight apps running locally or remotly): GitHub, Playwright, Web Browsing, PostgreSQL, etc
+### Layers
+
+- Transport Layer: Defines how messages are exchanged between MCP clients and MCP servers. The transport layer abstracts communication details from the protocol layer, enabling the same JSON-RPC 2.0 message format across all transport mechanisms. There are two transport mechanisms:
+  - Stdio transport (local): Uses standard input/output streams for direct communication between local processes on the same machine, no network overhead.
+  - Streamable HTTP transport (Remote): Uses HTTP POST for client-to-server messages with optional Server-Sent Events for streaming capabilities.
+    - The client MUST use HTTP POST to send JSON-RPC messages to the MCP endpoint.
+    - The client MAY issue an HTTP GET to the MCP endpoint.
+- The data layer implements a JSON-RPC 2.0 based exchange protocol that defines the message structure and semantics. A core part of MCP is defining the schema and semantics between MCP clients and MCP servers. This layer includes:
+  - Lifecycle management: Handles connection initialization, capability negotiation, and connection termination between clients and servers
+  - Server features: Enables servers to provide functionalities like tools for AI actions, resources for context data, and prompts for interaction templates from and to the client
+  - Client features: Enables servers to ask the client to sample from the host LLM, elicit input from the user, and log messages to the client
+  - Utility features: Supports additional capabilities like notifications for real-time updates and progress tracking for long-running operations
+    - Notifications: The protocol supports real-time notifications to enable dynamic updates between servers and clients. For example, when a server's available tools change—such as when new functionality becomes available or existing tools are modified—the server can send tool update notifications to inform connected clients about these changes. Notifications are sent as JSON-RPC 2.0 notification messages (without expecting a response) and enable MCP servers to provide real-time updates to connected clients.
 
 ### Primitives
 
-Problems:
+MCP primitives are the most important concept within MCP. They define what clients and servers can offer each other. These primitives specify the types of contextual information that can be shared with AI applications.
 
-- LLMs are limited by their training data, so they can't access real-time or organization-specific information.
-- Developers currently have to:
-  - Learn and integrate each service's API.
-  - Manually craft prompts to inform the LLM of available tools or data.
-  - Handle orchestration between the LLM and the tools/data.
+MCP defines three core primitives that servers can expose:
 
-- Key Features **MCP servers** can provide three main types of capabilities:
-  - Tools: Functions that can be called by the LLM (with user approval)
-  - Resources (context): File-like data that can be read by clients (like API responses or file contents)
-  - Prompts: Pre-written templates that help users accomplish specific tasks
+- Tools: Executable functions that AI applications can invoke to perform actions (e.g., file operations, API calls, database queries)
+- Resources: Data sources that provide contextual information to AI applications (e.g., file contents, database records, API responses)
+- Prompts: Reusable templates that help structure interactions with language models (e.g., system prompts, few-shot examples)
+
+As a concrete example, consider an MCP server that provides context about a database. It can expose tools for querying the database, a resource that contains the schema of the database, and a prompt that includes few-shot examples for interacting with the tools.
+
+### Client Primitives
 
 Clients:
 
-- Sampling
-- Elicitation
-- Roots
-- Logging
+- Sampling: Allows servers to request language model completions from the client's AI application. This is useful when servers' authors want access to a language model, but want to stay model independent and not include a language model SDK in their MCP server.
+- Elicitation: Allows servers to request additional information from users. This is useful when servers' authors want to get more information from the user, or ask for confirmation of an action.
+- Roots: Roots allow clients to specify which files servers can access, guiding them to relevant directories while maintaining security boundaries.
+- Logging: Enables servers to send log messages to clients for debugging and monitoring purposes.
 
 ### Example workflow
 
+```mermaid
+---
+title: Advanced MCP Scenarios with Client-Server LLM Integration
+description: A sequence diagram showing the detailed interaction flow between user, client application, client LLM, multiple MCP servers, and server LLM, illustrating tool discovery, user interaction, direct tool calling, and feature negotiation phases
+---
+sequenceDiagram
+    autonumber
+    actor User as 👤 User
+    participant ClientApp as 🖥️ Client App
+    participant ClientLLM as 🧠 Client LLM
+    participant Server1 as 🔧 MCP Server 1
+    participant Server2 as 📚 MCP Server 2
+    participant ServerLLM as 🤖 Server LLM
+    
+    %% Discovery Phase
+    rect rgb(220, 240, 255)
+        Note over ClientApp, Server2: TOOL DISCOVERY PHASE
+        ClientApp->>+Server1: Request available tools/resources
+        Server1-->>-ClientApp: Return tool list (JSON)
+        ClientApp->>+Server2: Request available tools/resources
+        Server2-->>-ClientApp: Return tool list (JSON)
+        Note right of ClientApp: Store combined tool<br/>catalog locally
+    end
+    
+    %% User Interaction
+    rect rgb(255, 240, 220)
+        Note over User, ClientLLM: USER INTERACTION PHASE
+        User->>+ClientApp: Enter natural language prompt
+        ClientApp->>+ClientLLM: Forward prompt + tool catalog
+        ClientLLM->>-ClientLLM: Analyze prompt & select tools
+    end
+    
+    %% Scenario A: Direct Tool Calling
+    alt Direct Tool Calling
+        rect rgb(220, 255, 220)
+            Note over ClientApp, Server1: SCENARIO A: DIRECT TOOL CALLING
+            ClientLLM->>+ClientApp: Request tool execution
+            ClientApp->>+Server1: Execute specific tool
+            Server1-->>-ClientApp: Return results
+            ClientApp->>+ClientLLM: Process results
+            ClientLLM-->>-ClientApp: Generate response
+            ClientApp-->>-User: Display final answer
+        end
+    
+    %% Scenario B: Feature Negotiation (VS Code style)
+    else Feature Negotiation (VS Code style)
+        rect rgb(255, 220, 220)
+            Note over ClientApp, ServerLLM: SCENARIO B: FEATURE NEGOTIATION
+            ClientLLM->>+ClientApp: Identify needed capabilities
+            ClientApp->>+Server2: Negotiate features/capabilities
+            Server2->>+ServerLLM: Request additional context
+            ServerLLM-->>-Server2: Provide context
+            Server2-->>-ClientApp: Return available features
+            ClientApp->>+Server2: Call negotiated tools
+            Server2-->>-ClientApp: Return results
+            ClientApp->>+ClientLLM: Process results
+            ClientLLM-->>-ClientApp: Generate response
+            ClientApp-->>-User: Display final answer
+        end
+    end
+```
+
+MCP follows a client-server architecture where an MCP host establishes connections to one or more MCP servers. The MCP host accomplishes this by creating one MCP client for each MCP server. Each MCP client maintains a dedicated one-to-one connection with its corresponding MCP server.
+
+Note that MCP server refers to the program that serves context data, regardless of where it runs. MCP servers can execute locally or remotely. For example, when Claude Desktop launches the filesystem server, the server runs locally on the same machine because it uses the STDIO transport.
+
 - Uses a client-server model:
   - The AI app contains MCP clients, one for each external service.
-  - Each external service has a corresponding MCP server, which speaks both MCP and the service’s native API.
+  - Each external service has a corresponding MCP server, which speaks both MCP and the service's native API.
 - Agent/Host (it is like a microservice called Host app that uses MCP client library to create instance) and Server communicates with STDIO on local or HTTP/SSE, messages in JSON/RPC. Maybe not best, or perfect, but it works and we needed standard to start with. ChatGPT/Gemini will not call the tools (maybe inside a network), but recommends to do it and the MCP client does it (maybe asks user for confirmation).
+
+## Demo
+
+### 1. GitHUb
+
+Create an issue for this repository to add MCP with Azure API Management.
+
+What is Azure API Management?
+
+Implement the mentioned issue.
+
+### 2. Playwright
+
+Generate a Playwright test for the following scenario:
+
+1. Navigate to `https://debs-obrien.github.io/playwright-movies-app`
+2. search for 'Garfield'
+3. verify the movie is in the list
+
+`npx playwright install chrome`
+Go to `https://www.ascent.io/data-ai` and then to find out more about Modern Platforms. Close any overlays if needed.
+
+Generate tests for this interaction for playwright.
 
 ## Agentic AI
 
@@ -84,9 +192,16 @@ Semi-autonomous software that can be given a goal and will work to achieve that 
 
 ## Use cases
 
+**1**
+Know MCP now and for the future, it is like HTML or HTTP, you do not have to develop it, but you use it in your products and services. It is here to stay and will be used in many products and services.
+
+The idea is to show the tool and then you can apply it to your own use cases.
+
+**2**
+
 - Not everything needs AI, but you need to find your own use cases. Big enterprises can benefit more from this since it has a lot of processes and data that can be automated.
 - Now businesses are more aware of the potential of AI and are looking for practical applications. The field is also more mature, with more tools and frameworks available to build AI applications.
-- To know wthe limits, features to know when it is the right case to apply it. To let users find the right use case. It is like when we got the OS, or the web, or mobile apps. We had to find the right use cases and the right way to apply it.
+- To know the limits, features to know when it is the right case to apply it. To let users find the right use case. It is like when we got the OS, or the web, or mobile apps. We had to find the right use cases and the right way to apply it.
 - Get rich by clonning VS Code or Chromium add AI and get rich. Kiro (Amazon), Trae (ByDance, TikTok) Cursor, Windsurf (Google made a soft aquicistion, bought the license and talent), and more all only forked VS Code and added AI capabilities, or Comet (Perplexity) that forked Chromium and added AI capabilities.
 
 - [NLWeb](https://github.com/nlweb-ai/NLWeb)
@@ -135,35 +250,7 @@ Semi-autonomous software that can be given a goal and will work to achieve that 
 - A2A (Agent to Agent) from Google
 - VSCode AI toolkit
 
-## Demo
-
-### 1. GitHUb
-
-Create an issue for this repository to add MCP with Azure API Management.
-
-What is Azure API Management?
-
-Implement the mentioned issue.
-
-### 2. Playwright
-
-Generate a Playwright test for the following scenario:
-1. Navigate to https://debs-obrien.github.io/playwright-movies-app
-2. search for 'Garfield'
-3. verify the movie is in the list
-
-
-`npx playwright install chrome`
-
-Go to https://ascent.io/
-
-Go to https://www.ascent.io/data-ai and then to find out more about Modern Platforms. Close any overlays if needed.
-
-Generate tests for this interaction for playwright.
-
-
-
-### Others
+## MISC
 
 - Show case hands on end-to-end
 - Local with STDIO
