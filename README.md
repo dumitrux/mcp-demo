@@ -72,6 +72,10 @@ azd up
 azd down
 ```
 
+```powershell
+npx @modelcontextprotocol/inspector https://mcp-container-py.victoriousriver-c8c0c9c5.westeurope.azurecontainerapps.io/mcp
+```
+
 ## 3. Remote MCP Weather with Azure API Management
 
 Based on [Azure-Samples/remote-mcp-apim-functions-python](https://github.com/Azure-Samples/remote-mcp-apim-functions-python)
