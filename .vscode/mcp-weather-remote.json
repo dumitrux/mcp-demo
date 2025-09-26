@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "weather": {
+      "type": "http",
+      "url": "https://mcp-container-py.victoriousriver-c8c0c9c5.westeurope.azurecontainerapps.io/mcp"
+    }
+  }
+}
